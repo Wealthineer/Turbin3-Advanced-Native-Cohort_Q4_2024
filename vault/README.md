@@ -1,0 +1,1 @@
+This program tries to keep the less optimized native code in commented out sections. That makes it look somewhat  messy, but should help for educational purposes and for understanding the code.
