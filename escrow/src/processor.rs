@@ -1,5 +1,6 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
+use solana_program::{msg,account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
+
 
 use crate::instructions;
 
@@ -20,6 +21,8 @@ pub enum EscrowInstruction {
 }
 
 pub fn process_instruction(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+
+    msg!("Escrow");
 
     let instruction = EscrowInstruction::try_from_slice(data)?;
 

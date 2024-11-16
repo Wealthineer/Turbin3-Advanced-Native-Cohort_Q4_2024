@@ -1,6 +1,6 @@
 use solana_program::program::invoke;
 use solana_program::sysvar::Sysvar;
-use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey, rent::Rent, system_instruction, system_program};
+use solana_program::{msg, account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey, rent::Rent, system_instruction, system_program};
 use spl_token::instruction::transfer_checked;
 use spl_token::state::Mint;
 
@@ -8,6 +8,7 @@ use crate::{Escrow, EscrowArgs};
 
 
 pub fn make(program_id: &Pubkey, accounts: &[AccountInfo], args: EscrowArgs) -> ProgramResult {
+    msg!("make");
 
     let [maker, 
         mint_a,
@@ -35,14 +36,12 @@ pub fn make(program_id: &Pubkey, accounts: &[AccountInfo], args: EscrowArgs) -> 
 
     assert!(escrow.is_writable && escrow.data_is_empty());
 
-    let escrow_seeds = &[
-        b"escrow".as_ref(),
-        &maker.key.to_bytes(),
-        &[args.escrow_bump],
-    ];
+    let escrow_seeds = &[b"escrow", maker.key.as_ref(), &[args.escrow_bump]];
 
     let expected_escrow = Pubkey::create_program_address(escrow_seeds, program_id)?;
     assert_eq!(&expected_escrow, escrow.key);
+
+    msg!("creating escrow account");    
 
     invoke_signed(&system_instruction::create_account(
         maker.key, 
@@ -69,6 +68,14 @@ pub fn make(program_id: &Pubkey, accounts: &[AccountInfo], args: EscrowArgs) -> 
 
     //we assume ata are already created
 
+    msg!("transferring tokens");
+
+    msg!("maker_ta_a: {:?}", maker_ta_a.key);
+    msg!("mint_a: {:?}", mint_a.key);
+    msg!("vault: {:?}", vault.key); 
+    msg!("maker: {:?}", maker.key);
+    msg!("token_program: {:?}", token_program.key);
+
     invoke(
         &transfer_checked(
             token_program.key,
@@ -84,6 +91,7 @@ pub fn make(program_id: &Pubkey, accounts: &[AccountInfo], args: EscrowArgs) -> 
             maker.clone(),
             maker_ta_a.clone(),
             vault.clone(),
+            mint_a.clone(),
         ],
     )?;
 
