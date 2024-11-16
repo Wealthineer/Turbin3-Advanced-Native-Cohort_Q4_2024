@@ -1,7 +1,7 @@
 use solana_program::program::invoke;
 use solana_program::sysvar::Sysvar;
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
+    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed,
     program_error::ProgramError, program_pack::Pack, pubkey::Pubkey, rent::Rent,
     system_instruction, system_program,
 };
@@ -11,7 +11,6 @@ use spl_token::state::Mint;
 use crate::{Escrow, EscrowArgs};
 
 pub fn make(program_id: &Pubkey, accounts: &[AccountInfo], args: EscrowArgs) -> ProgramResult {
-    msg!("make");
 
     let [maker, mint_a, mint_b, escrow, maker_ta_a, vault, token_program, system_program] =
         accounts
@@ -37,8 +36,6 @@ pub fn make(program_id: &Pubkey, accounts: &[AccountInfo], args: EscrowArgs) -> 
 
     let expected_escrow = Pubkey::create_program_address(escrow_seeds, program_id)?;
     assert_eq!(&expected_escrow, escrow.key);
-
-    msg!("creating escrow account");
 
     invoke_signed(
         &system_instruction::create_account(
@@ -66,15 +63,6 @@ pub fn make(program_id: &Pubkey, accounts: &[AccountInfo], args: EscrowArgs) -> 
     escrow_data.clone_from(&new_escrow);
 
     //we assume ata are already created
-
-    msg!("transferring tokens");
-
-    msg!("maker_ta_a: {:?}", maker_ta_a.key);
-    msg!("mint_a: {:?}", mint_a.key);
-    msg!("vault: {:?}", vault.key);
-    msg!("maker: {:?}", maker.key);
-    msg!("token_program: {:?}", token_program.key);
-
     invoke(
         &transfer_checked(
             token_program.key,
