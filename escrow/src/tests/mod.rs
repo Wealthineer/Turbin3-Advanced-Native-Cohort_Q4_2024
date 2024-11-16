@@ -27,7 +27,8 @@ mod tests {
             "22222222222222222222222222222222222222222222",
         ));
 
-        let mollusk = Mollusk::new(&program_id, "target/deploy/escrow");
+        let mut mollusk = Mollusk::new(&program_id, "target/deploy/escrow");
+        mollusk_token::token::add_program(&mut mollusk);
 
         let token_admin = Pubkey::new_unique();
         let maker = Pubkey::new_unique();
