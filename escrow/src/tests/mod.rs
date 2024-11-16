@@ -11,6 +11,9 @@ use spl_token::state::AccountState;
 #[cfg(test)]
 pub mod make;
 
+#[cfg(test)]
+pub mod take;
+
 pub fn setup() -> (Mollusk, Pubkey) {
     let program_id = Pubkey::new_from_array(five8_const::decode_32_const(
         "22222222222222222222222222222222222222222222",
