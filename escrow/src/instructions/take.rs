@@ -1,6 +1,6 @@
 use solana_program::program::invoke;
-use solana_program::{msg, 
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed,
+use solana_program::{
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
     program_error::ProgramError, program_pack::Pack, pubkey::Pubkey, system_program,
 };
 use spl_token::instruction::{close_account, transfer_checked};
@@ -9,18 +9,7 @@ use spl_token::state::Mint;
 use crate::Escrow;
 
 pub fn take(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-    let [
-        taker, 
-        maker, 
-        mint_a, 
-        mint_b, 
-        escrow, 
-        maker_ta_b, 
-        taker_ta_b, 
-        taker_ta_a, 
-        vault, 
-        token_program, 
-        system_program] =
+    let [taker, maker, mint_a, mint_b, escrow, maker_ta_b, taker_ta_b, taker_ta_a, vault, token_program, system_program] =
         accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -35,19 +24,18 @@ pub fn take(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     let mint_a_decimals = Mint::unpack(&mint_a.try_borrow_data()?)?.decimals;
     let mint_b_decimals = Mint::unpack(&mint_b.try_borrow_data()?)?.decimals;
 
-    let escrow_data = *bytemuck::try_from_bytes::<Escrow>(*escrow.data.borrow())
-        .map_err(|_| ProgramError::AccountBorrowFailed)?;
+    let (escrow_bump, escrow_receive) = {
+        let binding = escrow.try_borrow_data()?;
+        let escrow_data = bytemuck::try_from_bytes::<Escrow>(&binding)
+            .map_err(|_| ProgramError::InvalidAccountData)?;
+        (escrow_data.bump, escrow_data.receive)
+    };
 
-    let escrow_seeds = &[
-        b"escrow",
-        maker.key.as_ref(),
-        &[escrow_data.bump as u8],
-    ];
+    let escrow_seeds = &[b"escrow", maker.key.as_ref(), &[escrow_bump as u8]];
     //we assume ata are already created
 
     let amount = spl_token::state::Account::unpack(&vault.try_borrow_data()?)?.amount;
 
-    msg!("amount: {}", amount);
     //A: vault -> taker_ta_a
     invoke_signed(
         &transfer_checked(
@@ -64,8 +52,6 @@ pub fn take(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         &[escrow_seeds],
     )?;
 
-    msg!("A: vault -> taker_ta_a done");
-
     //B: taker_ta_b -> maker_ta_b
     invoke(
         &transfer_checked(
@@ -75,13 +61,18 @@ pub fn take(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
             maker_ta_b.key,
             taker.key,
             &[],
-            escrow_data.receive,
+            escrow_receive,
             mint_b_decimals,
         )?,
         accounts,
     )?;
 
-    msg!("B: taker_ta_b -> maker_ta_b done");
+    //close vault
+    invoke_signed(
+        &close_account(token_program.key, vault.key, maker.key, escrow.key, &[])?,
+        accounts,
+        &[escrow_seeds],
+    )?;
 
     //close escrow
     let mut escrow_data = escrow.data.borrow_mut();
@@ -91,17 +82,6 @@ pub fn take(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         .checked_add(escrow.lamports())
         .ok_or(ProgramError::ArithmeticOverflow)?;
     **escrow.lamports.borrow_mut() = 0;
-
-    msg!("C: close escrow done");
-
-    //close vault
-    invoke_signed(
-        &close_account(token_program.key, vault.key, maker.key, escrow.key, &[])?,
-        accounts,
-        &[escrow_seeds],
-    )?;
-
-    msg!("D: close vault done");
 
     Ok(())
 }

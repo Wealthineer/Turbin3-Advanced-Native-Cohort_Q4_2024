@@ -7,9 +7,12 @@ use solana_sdk::{
     pubkey::Pubkey,
 };
 
-use crate::{state::Escrow, tests::{create_account, create_mint_account, create_token_account, setup}};
+use crate::{
+    state::Escrow,
+    tests::{create_account, create_mint_account, create_token_account, setup},
+};
 
-use crate::processor::{EscrowArgs, EscrowInstruction};
+use crate::processor::EscrowInstruction;
 
 #[test]
 fn take() {
@@ -36,17 +39,11 @@ fn take() {
     let mint_b_account =
         create_mint_account(&mollusk, token_admin, 1_000_000_000, 9, true, token_program);
     let vault_account = create_token_account(&mollusk, &escrow, &mint_a, 1_000_000);
-    let taker_ta_a_account = create_token_account(&mollusk, &maker, &mint_a, 0);
-    let taker_ta_b_account = create_token_account(&mollusk, &maker, &mint_b, 2_000_000);
+    let taker_ta_a_account = create_token_account(&mollusk, &taker, &mint_a, 0);
+    let taker_ta_b_account = create_token_account(&mollusk, &taker, &mint_b, 2_000_000);
     let maker_ta_b_account = create_token_account(&mollusk, &maker, &mint_b, 0);
 
-
-
-
-    let lamports = mollusk
-    .sysvars
-        .rent
-        .minimum_balance(Escrow::LEN);
+    let lamports = mollusk.sysvars.rent.minimum_balance(Escrow::LEN);
 
     let mut escrow_account = create_account(lamports, Escrow::LEN, &program_id);
 
@@ -56,8 +53,9 @@ fn take() {
             mint_a.to_bytes().to_vec(),
             mint_b.to_bytes().to_vec(),
             2_000_000u64.to_le_bytes().to_vec(),
-            escrow_bump.to_le_bytes().to_vec(),
-        ].concat()
+            (escrow_bump as u64).to_le_bytes().to_vec(),
+        ]
+        .concat(),
     );
 
     let escrow_instruction = EscrowInstruction::Take();
@@ -106,22 +104,31 @@ fn take() {
             (token_program, token_program_account),
             (system_program, system_program_account),
         ],
-        &[Check::success()],
+        &[Check::success(),
+        Check::account(&vault).closed().build(),
+        ],
     );
 
-    // let escrow_result_account = result
-    //     .get_account(&escrow)
-    //     .expect("Escrow account not found");
+    // Verify taker_ta_a received the tokens
+    let taker_ta_a_result = result
+        .get_account(&taker_ta_a)
+        .expect("Taker token account A not found");
 
-    // let escrow_result_data = &escrow_result_account.data();
-    // assert_eq!(escrow_result_data.len(), Escrow::LEN);
+    let taker_ta_a_data: spl_token::state::Account = solana_sdk::program_pack::Pack::unpack(
+        &taker_ta_a_result.data()
+    ).expect("Failed to unpack taker token account A");
 
-    // let vault_result_account = result
-    //     .get_account(&vault)
-    //     .expect("Vault account not found");
+    assert_eq!(taker_ta_a_data.amount, 1_000_000);
 
-    // let vault_result_data: spl_token::state::Account = solana_sdk::program_pack::Pack::unpack(&vault_result_account.data())
-    // .expect("Failed to unpack contributor token account");
+    // Verify maker_ta_b received the tokens
+    let maker_ta_b_result = result
+        .get_account(&maker_ta_b)
+        .expect("Maker token account B not found");
 
-    // assert_eq!(vault_result_data.amount, 1_000_000);
+    let maker_ta_b_data: spl_token::state::Account = solana_sdk::program_pack::Pack::unpack(
+        &maker_ta_b_result.data()
+    ).expect("Failed to unpack maker token account B");
+
+    assert_eq!(maker_ta_b_data.amount, 2_000_000);
+
 }

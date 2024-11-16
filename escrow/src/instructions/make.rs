@@ -11,7 +11,6 @@ use spl_token::state::Mint;
 use crate::{Escrow, EscrowArgs};
 
 pub fn make(program_id: &Pubkey, accounts: &[AccountInfo], args: EscrowArgs) -> ProgramResult {
-
     let [maker, mint_a, mint_b, escrow, maker_ta_a, vault, token_program, system_program] =
         accounts
     else {
