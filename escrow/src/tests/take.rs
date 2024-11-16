@@ -15,7 +15,7 @@ use crate::{
 use crate::processor::EscrowInstruction;
 
 #[test]
-fn refund() {
+fn take() {
     let (mollusk, program_id) = setup();
 
     let token_admin = Pubkey::new_unique();
