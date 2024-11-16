@@ -1,23 +1,19 @@
 use solana_program::program::invoke;
 use solana_program::sysvar::Sysvar;
-use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey, rent::Rent, system_instruction, system_program};
+use solana_program::{
+    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed,
+    program_error::ProgramError, program_pack::Pack, pubkey::Pubkey, rent::Rent,
+    system_instruction, system_program,
+};
 use spl_token::instruction::transfer_checked;
 use spl_token::state::Mint;
 
 use crate::{Escrow, EscrowArgs};
 
-
 pub fn make(program_id: &Pubkey, accounts: &[AccountInfo], args: EscrowArgs) -> ProgramResult {
-
-    let [maker, 
-        mint_a,
-        mint_b,
-        escrow,
-        maker_ta_a,
-        vault,
-        token_program,
-        system_program,
-        ] = accounts else {
+    let [maker, mint_a, mint_b, escrow, maker_ta_a, vault, token_program, system_program] =
+        accounts
+    else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
@@ -35,23 +31,21 @@ pub fn make(program_id: &Pubkey, accounts: &[AccountInfo], args: EscrowArgs) -> 
 
     assert!(escrow.is_writable && escrow.data_is_empty());
 
-    let escrow_seeds = &[
-        b"escrow".as_ref(),
-        &maker.key.to_bytes(),
-        &[args.escrow_bump],
-    ];
+    let escrow_seeds = &[b"escrow", maker.key.as_ref(), &[args.escrow_bump]];
 
     let expected_escrow = Pubkey::create_program_address(escrow_seeds, program_id)?;
     assert_eq!(&expected_escrow, escrow.key);
 
-    invoke_signed(&system_instruction::create_account(
-        maker.key, 
-        escrow.key, 
-        Rent::get()?.minimum_balance(Escrow::LEN), 
-        Escrow::LEN as u64, 
-        &crate::id()), 
-        accounts, 
-        &[escrow_seeds]
+    invoke_signed(
+        &system_instruction::create_account(
+            maker.key,
+            escrow.key,
+            Rent::get()?.minimum_balance(Escrow::LEN),
+            Escrow::LEN as u64,
+            &crate::id(),
+        ),
+        accounts,
+        &[escrow_seeds],
     )?;
 
     let new_escrow = Escrow {
@@ -63,12 +57,11 @@ pub fn make(program_id: &Pubkey, accounts: &[AccountInfo], args: EscrowArgs) -> 
     };
 
     let mut escrow_data = *bytemuck::try_from_bytes_mut::<Escrow>(&mut *escrow.data.borrow_mut())
-    .map_err(|_| ProgramError::AccountBorrowFailed)?;
+        .map_err(|_| ProgramError::AccountBorrowFailed)?;
 
     escrow_data.clone_from(&new_escrow);
 
     //we assume ata are already created
-
     invoke(
         &transfer_checked(
             token_program.key,
@@ -84,6 +77,7 @@ pub fn make(program_id: &Pubkey, accounts: &[AccountInfo], args: EscrowArgs) -> 
             maker.clone(),
             maker_ta_a.clone(),
             vault.clone(),
+            mint_a.clone(),
         ],
     )?;
 

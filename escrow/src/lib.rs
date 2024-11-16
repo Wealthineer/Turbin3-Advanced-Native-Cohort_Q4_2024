@@ -9,6 +9,9 @@ pub use instructions::*;
 mod state;
 pub use state::*;
 
-declare_id!("11111111111111111111111111111111");
+#[cfg(test)]
+mod tests;
+
+declare_id!("22222222222222222222222222222222222222222222");
 
 entrypoint!(process_instruction);
