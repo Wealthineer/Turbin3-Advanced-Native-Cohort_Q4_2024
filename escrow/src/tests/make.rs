@@ -7,7 +7,10 @@ use solana_sdk::{
     pubkey::Pubkey,
 };
 
-use crate::{tests::{create_mint_account, create_token_account, setup}, Escrow};
+use crate::{
+    tests::{create_mint_account, create_token_account, setup},
+    Escrow,
+};
 
 use crate::processor::{EscrowArgs, EscrowInstruction};
 
@@ -76,9 +79,11 @@ fn make() {
             (token_program, token_program_account),
             (system_program, system_program_account),
         ],
-        &[Check::success(),
-        Check::account(&escrow).owner(&program_id).build(),
-        Check::account(&escrow).build()],
+        &[
+            Check::success(),
+            Check::account(&escrow).owner(&program_id).build(),
+            Check::account(&escrow).build(),
+        ],
     );
 
     let escrow_result_account = result
@@ -88,12 +93,11 @@ fn make() {
     let escrow_result_data = &escrow_result_account.data();
     assert_eq!(escrow_result_data.len(), Escrow::LEN);
 
-    let vault_result_account = result
-        .get_account(&vault)
-        .expect("Vault account not found");
+    let vault_result_account = result.get_account(&vault).expect("Vault account not found");
 
-    let vault_result_data: spl_token::state::Account = solana_sdk::program_pack::Pack::unpack(&vault_result_account.data())
-    .expect("Failed to unpack contributor token account");
+    let vault_result_data: spl_token::state::Account =
+        solana_sdk::program_pack::Pack::unpack(&vault_result_account.data())
+            .expect("Failed to unpack contributor token account");
 
     assert_eq!(vault_result_data.amount, 1_000_000);
 }

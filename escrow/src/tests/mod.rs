@@ -14,6 +14,9 @@ pub mod make;
 #[cfg(test)]
 pub mod take;
 
+#[cfg(test)]
+pub mod refund;
+
 pub fn setup() -> (Mollusk, Pubkey) {
     let program_id = Pubkey::new_from_array(five8_const::decode_32_const(
         "22222222222222222222222222222222222222222222",

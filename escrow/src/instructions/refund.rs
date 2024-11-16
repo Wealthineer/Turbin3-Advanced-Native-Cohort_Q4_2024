@@ -17,8 +17,6 @@ pub fn refund(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     assert!(crate::check_id(program_id));
     assert!(maker.is_signer);
     assert!(maker.is_writable);
-    assert_eq!(vault.owner, system_program.key);
-    assert_eq!(escrow.owner, program_id);
 
     let mint_a_unpacked = Mint::unpack(&mint_a.try_borrow_data()?)?;
     assert!(escrow.is_writable);
@@ -51,6 +49,13 @@ pub fn refund(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         &[escrow_seeds],
     )?;
 
+    //close vault
+    invoke_signed(
+        &close_account(token_program.key, vault.key, maker.key, escrow.key, &[])?,
+        accounts,
+        &[escrow_seeds],
+    )?;
+
     //close escrow
     let mut escrow_data = escrow.data.borrow_mut();
     escrow_data.fill(0);
@@ -59,13 +64,6 @@ pub fn refund(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         .checked_add(escrow.lamports())
         .ok_or(ProgramError::ArithmeticOverflow)?;
     **escrow.lamports.borrow_mut() = 0;
-
-    //close vault
-    invoke_signed(
-        &close_account(token_program.key, vault.key, maker.key, escrow.key, &[])?,
-        accounts,
-        &[escrow_seeds],
-    )?;
 
     Ok(())
 }

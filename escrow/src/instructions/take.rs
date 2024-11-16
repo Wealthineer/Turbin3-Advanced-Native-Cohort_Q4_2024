@@ -1,6 +1,6 @@
 use solana_program::program::invoke;
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
+    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed,
     program_error::ProgramError, program_pack::Pack, pubkey::Pubkey, system_program,
 };
 use spl_token::instruction::{close_account, transfer_checked};
