@@ -9,6 +9,7 @@ pub use instructions::*;
 mod state;
 pub use state::*;
 
+#[cfg(test)]
 mod tests;
 
 declare_id!("22222222222222222222222222222222222222222222");
