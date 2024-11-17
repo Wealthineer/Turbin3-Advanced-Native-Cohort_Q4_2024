@@ -4,13 +4,15 @@
 - Removing Borsh serialization/deserialization
 
 ### CU usage
+- make: 8100
+- take: 16596
+- refund: 10538
 
-- make: 
-- take: 
-- refund: 
+### Program size
+- 48k
 
 ## Baseline
-See `escrow` program in this repo for baseline code this started with.
+See  [`escrow`](../escrow) for baseline code this started with.
 
 ### CU usage
 - make: 14773

@@ -1,9 +1,8 @@
-use std::borrow::BorrowMut;
 
 use pinocchio::{
     account_info::AccountInfo, instruction::{Seed, Signer}, program_error::ProgramError, pubkey::Pubkey, ProgramResult
 };
-use pinocchio_token::{instructions::{CloseAccount, TransferChecked}, state::{Mint, TokenAccount}};
+use pinocchio_token::{instructions::{CloseAccount, Transfer}, state::TokenAccount};
 
 use crate::Escrow;
 
@@ -21,32 +20,28 @@ pub fn take(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     assert!(taker.is_writable());
 
     let escrow_data = Escrow::from_account_info(escrow);
+    assert_eq!(&escrow_data.mint_a(), mint_a.key());
+    assert_eq!(&escrow_data.mint_b(), mint_b.key());
 
     let bump_binding = [escrow_data.bump() as u8];
     let escrow_seeds = [Seed::from(b"escrow"), Seed::from(maker.key().as_ref()), Seed::from(&bump_binding)];
     let escrow_signer = Signer::from(&escrow_seeds);
 
     let amount = TokenAccount::from_account_info(vault)?.amount();
-    let mint_a_decimals = Mint::from_account_info(mint_a)?.decimals();
-    let mint_b_decimals = Mint::from_account_info(mint_b)?.decimals();
 
     //A: vault -> taker_ta_a
-    TransferChecked {
+    Transfer {
         from: vault,
         to: taker_ta_a,
         authority: escrow,
-        mint: mint_a,
-        decimals: mint_a_decimals,
         amount,
     }.invoke_signed(&[escrow_signer])?;
 
     //B: taker_ta_b -> maker_ta_b
-    TransferChecked {
+    Transfer {
         from: taker_ta_b,
         to: maker_ta_b,
         authority: taker,
-        mint: mint_b,
-        decimals: mint_b_decimals,
         amount: escrow_data.receive(),
     }.invoke()?;
 
@@ -59,14 +54,13 @@ pub fn take(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         destination: maker,
     }.invoke_signed(&[escrow_signer])?;
 
-    //close escrow
+    //close escrow by draining lamports and setting data length to 0
+    unsafe {
+        *maker.borrow_mut_lamports_unchecked() += *escrow.borrow_lamports_unchecked();
+        *escrow.borrow_mut_lamports_unchecked() = 0;
 
-    let maker_orig_lamports = maker.lamports();
-    *maker.lamports().borrow_mut() = maker_orig_lamports
-        .checked_add(escrow.lamports())
-        .ok_or(ProgramError::ArithmeticOverflow)?;
-    *escrow.lamports().borrow_mut() = 0;
-    escrow.realloc(0, false)?;
+        *(escrow.borrow_mut_data_unchecked().as_mut_ptr().sub(8) as *mut u64) = 0;
+    }
 
 
     Ok(())

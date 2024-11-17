@@ -51,7 +51,7 @@ fn take() {
             mint_a.to_bytes().to_vec(),
             mint_b.to_bytes().to_vec(),
             2_000_000u64.to_le_bytes().to_vec(),
-            (escrow_bump as u64).to_le_bytes().to_vec(),
+            (escrow_bump as u8).to_le_bytes().to_vec(),
         ]
         .concat(),
     );
